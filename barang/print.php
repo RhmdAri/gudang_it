@@ -8,7 +8,10 @@ if (!$con) {
     die("Koneksi gagal: " . mysqli_connect_error());
 }
 
-if (isset($_GET['export_excel'])) {
+session_start(); // Mulai sesi
+$divisi = isset($_SESSION['divisi']) ? $_SESSION['divisi'] : null; // Ambil divisi dari sesi
+
+if (isset($_GET['export_excel']) && $divisi) {
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
 
@@ -39,12 +42,12 @@ if (isset($_GET['export_excel'])) {
             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
         ],
     ]);
-
     $result = mysqli_query($con, "
         SELECT 
             barang.kode, barang.nama, kategori.nama AS namaKategori, barang.stok
         FROM barang
         INNER JOIN kategori ON barang.idKategori = kategori.id
+        WHERE barang.devisi = '$divisi'
         ORDER BY kategori.nama ASC
     ");
 
@@ -56,7 +59,6 @@ if (isset($_GET['export_excel'])) {
               ->setCellValue('D' . $rowNum, $data['stok']);
         $rowNum++;
     }
-
     $styleArray = [
         'borders' => [
             'allBorders' => [
@@ -70,9 +72,7 @@ if (isset($_GET['export_excel'])) {
     foreach (range('A', 'D') as $columnID) {
         $sheet->getColumnDimension($columnID)->setAutoSize(true);
     }
-
     $writer = new Xlsx($spreadsheet);
-
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment;filename="laporan_barang.xlsx"');
     header('Cache-Control: max-age=0');
@@ -80,8 +80,10 @@ if (isset($_GET['export_excel'])) {
     $writer->save('php://output');
     exit();
 }
+$bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
+$bulanNama = date('F', mktime(0, 0, 0, $bulan, 10)); // Menampilkan nama bulan
+$tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -92,76 +94,109 @@ if (isset($_GET['export_excel'])) {
         * {
             font-family: Arial, sans-serif;
         }
-        
         table {
             border-collapse: collapse;
-            width: 100%;
             font-size: 12px;
+            width: 100%;
         }
-
         table th, table td {
             padding: 5px;
-            text-align: left;
+            text-align: center;
         }
-
-        table th {
-            background-color: #f2f2f2;
+        .kop-surat {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid black;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
         }
-
+        .kop-surat img {
+            width: 100px;
+        }
+        .kop-surat .title {
+            text-align: center;
+            flex: 1;
+            margin-left: 10px;
+        }
+        .kop-surat .title h1 {
+            margin: 0;
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+        .kop-surat .title p {
+            margin: 0;
+            font-size: 14px;
+        }
+        thead {
+            background-color: #28a745;
+            color: white;
+        }
+        .table-container {
+            margin-top: 20px;
+        }
         .footer {
             margin-top: 50px;
         }
-
         .footer p {
             margin: 0;
         }
     </style>
 </head>
 <body>
-    <h1 align="center">Laporan Data Barang</h1>
-    <p align="center"><?= date("Y/m/d") ?></p>
+    <?php
+    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Nama Pegawai Tidak Dikenal';
+    ?>
 
-    <table border="1">
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Kode Barang</th>
-                <th>Nama Barang</th>
-                <th>Kategori</th>
-                <th>Stok</th>
-            </tr>
-        </thead>
-        
-        <tbody>
-        <?php
-        include '../connection.php';
-        $result = mysqli_query($con, "SELECT 
-                                        barang.id, barang.kode, barang.nama, barang.stok,
-                                        kategori.nama as namaKategori
-                                        FROM barang
-                                        INNER JOIN kategori ON barang.idKategori = kategori.id");
-
-        $no = 1;
-        while ($data = mysqli_fetch_array($result)) {
-        ?>
-            <tr>
-                <td align="center"><?= $no++ ?></td> 
-                <td><?= $data['kode'] ?></td>
-                <td><?= $data['nama'] ?></td>
-                <td><?= $data['namaKategori'] ?></td>
-                <td><?= $data['stok'] ?></td>
-            </tr>
-        <?php } ?>
-        </tbody>
-    </table>
-
+    <div class="kop-surat">
+        <img src="../assets/images/rsisa.png" alt="Logo RSI Sultan Agung Banjarbaru">
+        <div class="title">
+            <h1>RSI Sultan Agung Banjarbaru</h1>
+            <p>Data Barang</p>
+            <p><?= $bulanNama ?> <?= $tahun ?></p>
+        </div>
+    </div>
+    <div class="table-container">
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Kode Barang</th>
+                    <th>Nama Barang</th>
+                    <th>Kategori</th>
+                    <th>Stok</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php
+            $result = mysqli_query($con, "SELECT 
+                                            barang.kode, barang.nama, barang.stok,
+                                            kategori.nama as namaKategori
+                                            FROM barang
+                                            INNER JOIN kategori ON barang.idKategori = kategori.id
+                                            WHERE barang.devisi = '$divisi'
+            ");
+            $no = 1;
+            while ($data = mysqli_fetch_array($result)) {
+            ?>
+                <tr>
+                    <td><?= $no++ ?></td> 
+                    <td><?= htmlspecialchars($data['kode']) ?></td>
+                    <td><?= htmlspecialchars($data['nama']) ?></td>
+                    <td><?= htmlspecialchars($data['namaKategori']) ?></td>
+                    <td><?= htmlspecialchars($data['stok']) ?></td>
+                </tr>
+            <?php } ?>
+            </tbody>
+        </table>
+    </div>
     <div class="footer">
         <table width="100%">
             <tr>
                 <td width="50%" align="center">
-                    <p>Pegawai</p>
+                    <p>Penanggung Jawab</p>
                     <br><br><br>
-                    <p><strong>Nama Pegawai</strong></p>
+                    <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
                 </td>
             </tr>
         </table>

@@ -1,36 +1,72 @@
 <?php
-if (isset($_GET['id'])) {
-    $id = $_GET['id'];
-
-    // Ambil data yang sudah ada berdasarkan ID
-    $query = mysqli_query($con, "SELECT * FROM keluar WHERE id = '$id'");
-    $data = mysqli_fetch_array($query);
-
-    // Ambil ID Petugas, ID Barang dan Jumlah untuk digunakan dalam form
-    $idPetugas = $data['idPetugas'];
-    $idBarang = $data['idBarang'];
-    $jumlah = $data['jumlah'];
+session_start();
+include '../connection.php';
+if (!isset($_SESSION['id'])) {
+    echo "<script>
+        Swal.fire({
+            icon: 'warning',
+            title: 'Akses Ditolak',
+            text: 'Silakan login terlebih dahulu!'
+        }).then(() => {
+            window.location.href = '../';
+        });
+    </script>";
+    exit();
 }
 
-if (isset($_POST['submit'])) {
-    $idPetugas = $_POST['petugas'];
-    $idBarang = $_POST['barang'];
-    $jumlah = $_POST['jumlah'];
+$id = $_GET['id'];
+$divisi = $_SESSION['divisi'];
+$query = "SELECT * FROM keluar WHERE id = ? AND devisi = ?";
+$stmt = mysqli_prepare($con, $query);
+mysqli_stmt_bind_param($stmt, 'is', $id, $divisi);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 
-    // Update data
-    $update = mysqli_query($con, "UPDATE keluar SET idPetugas = '$idPetugas', idBarang = '$idBarang', jumlah = '$jumlah' WHERE id = '$id'");
+if (mysqli_num_rows($result) === 0) {
+    echo "<script>
+        Swal.fire({
+            icon: 'error',
+            title: 'Data Tidak Ditemukan',
+            text: 'Data yang Anda cari tidak ada atau bukan milik divisi Anda!'
+        }).then(() => {
+            window.location.href = '?page=keluar';
+        });
+    </script>";
+    exit();
+}
 
-    if ($update) {
-        // Update stok barang jika jumlah berubah
-        $updateStok = mysqli_query($con, "UPDATE barang SET stok = stok - $jumlah WHERE id = '$idBarang'");
+$data = mysqli_fetch_assoc($result);
+$jumlahAwal = $data['jumlah'];
+if (isset($_POST['update'])) {
+    $idPetugas = mysqli_real_escape_string($con, $_POST['petugas']);
+    $idBarang = mysqli_real_escape_string($con, $_POST['barang']);
+    $jumlahBaru = mysqli_real_escape_string($con, $_POST['jumlah']);
 
-        if ($updateStok) {
-            echo "<script>window.location.href = '?page=keluar';</script>";
+    if ($jumlahBaru > 0) {
+        $selisih = $jumlahBaru - $jumlahAwal;
+        $updateStokQuery = "UPDATE barang SET stok = stok - ? WHERE id = ?";
+        $updateStokStmt = mysqli_prepare($con, $updateStokQuery);
+        mysqli_stmt_bind_param($updateStokStmt, 'ii', $selisih, $idBarang);
+        mysqli_stmt_execute($updateStokStmt);
+        $updateQuery = "UPDATE keluar SET idPetugas = ?, idBarang = ?, jumlah = ? WHERE id = ? AND devisi = ?";
+        $updateStmt = mysqli_prepare($con, $updateQuery);
+        mysqli_stmt_bind_param($updateStmt, 'iisii', $idPetugas, $idBarang, $jumlahBaru, $id, $divisi);
+
+        if (mysqli_stmt_execute($updateStmt)) {
+            echo "<script>
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: 'Data berhasil diperbarui!'
+                }).then(() => {
+                    window.location.href = '?page=keluar';
+                });
+            </script>";
         } else {
-            echo "Gagal memperbarui stok barang";
+            echo "<script>Swal.fire({icon: 'error', title: 'Gagal', text: 'Gagal memperbarui data!'});</script>";
         }
     } else {
-        echo "Gagal memperbarui data keluar";
+        echo "<script>Swal.fire({icon: 'warning', title: 'Input Tidak Valid', text: 'Jumlah harus lebih dari 0!'});</script>";
     }
 }
 ?>
@@ -41,19 +77,22 @@ if (isset($_POST['submit'])) {
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <div class="page-header-title">
-                        <h5 class="m-b-10"><?php echo $title ?> - Edit</h5>
+                        <h5 class="m-b-10">Edit Barang Keluar</h5>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <ul class="breadcrumb-title">
-                        <li class="breadcrumb-item"><a href="?page=dashboard"> <i class="fa fa-home"></i> </a></li>
-                        <li class="breadcrumb-item"><a href="#!"><?php echo $title ?> - Edit</a></li>
+                        <li class="breadcrumb-item">
+                            <a href="?page=dashboard"><i class="fa fa-home"></i></a>
+                        </li>
+                        <li class="breadcrumb-item"><a href="?page=keluar">Barang Keluar</a></li>
+                        <li class="breadcrumb-item"><a href="#!">Edit Barang Keluar</a></li>
                     </ul>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="pcoded-inner-content">
         <div class="main-body">
             <div class="page-wrapper">
@@ -61,60 +100,64 @@ if (isset($_POST['submit'])) {
                     <div class="col-md-6">
                         <div class="card">
                             <div class="card-header">
-                                <h5><?php echo $title ?> - Edit</h5>
+                                <h5>Form Edit Barang Keluar</h5>
                             </div>
                             <div class="card-block">
-                                <form class="form-material" method="POST">
+                                <form method="POST" class="form-material" novalidate>
                                     <div class="form-group form-default">
-                                        <span class="form-bar"></span>
                                         <label>Petugas</label>
-                                        <div class="col-sm-15">
-                                            <select name="petugas" class="form-control">
-                                                <option value="" selected>- pilih petugas -</option>
-                                                <?php
-                                                    // Menampilkan pilihan petugas yang sudah ada
-                                                    $query = mysqli_query($con, "SELECT * FROM petugas");
-                                                    while ($row = mysqli_fetch_array($query)) {
-                                                        $selected = ($row['id'] == $idPetugas) ? 'selected' : '';
-                                                        echo "<option value=\"" . $row['id'] . "\" $selected>" . $row['nama'] . "</option>";
-                                                    }
-                                                ?>
-                                            </select>
-                                        </div>
+                                        <select name="petugas" class="form-control" required>
+                                            <option value="">- Pilih Petugas -</option>
+                                            <?php
+                                            $queryPetugas = "SELECT id, nama FROM petugas WHERE status = 'disetujui' AND divisi = ?";
+                                            $stmtPetugas = mysqli_prepare($con, $queryPetugas);
+                                            mysqli_stmt_bind_param($stmtPetugas, 's', $divisi);
+                                            mysqli_stmt_execute($stmtPetugas);
+                                            $resultPetugas = mysqli_stmt_get_result($stmtPetugas);
+                                            while ($petugas = mysqli_fetch_assoc($resultPetugas)) {
+                                                $selected = ($petugas['id'] == $data['idPetugas']) ? 'selected' : '';
+                                                echo "<option value='{$petugas['id']}' $selected>{$petugas['nama']}</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
+
                                     <div class="form-group form-default">
-                                        <span class="form-bar"></span>
                                         <label>Barang</label>
-                                        <div class="col-sm-15">
-                                            <select name="barang" class="form-control">
-                                                <option value="" selected>- pilih barang -</option>
-                                                <?php
-                                                    // Menampilkan pilihan barang yang sudah ada
-                                                    $query = mysqli_query($con, "SELECT * FROM barang");
-                                                    while ($row = mysqli_fetch_array($query)) {
-                                                        $selected = ($row['id'] == $idBarang) ? 'selected' : '';
-                                                        echo "<option value=\"" . $row['id'] . "\" $selected>" . $row['nama'] . "</option>";
-                                                    }
-                                                ?>
-                                            </select>
-                                        </div>
+                                        <select name="barang" class="form-control" required>
+                                            <option value="">- Pilih Barang -</option>
+                                            <?php
+                                            $queryBarang = "SELECT id, nama FROM barang WHERE devisi = ?";
+                                            $stmtBarang = mysqli_prepare($con, $queryBarang);
+                                            mysqli_stmt_bind_param($stmtBarang, 's', $divisi);
+                                            mysqli_stmt_execute($stmtBarang);
+                                            $resultBarang = mysqli_stmt_get_result($stmtBarang);
+                                            while ($barang = mysqli_fetch_assoc($resultBarang)) {
+                                                $selected = ($barang['id'] == $data['idBarang']) ? 'selected' : '';
+                                                echo "<option value='{$barang['id']}' $selected>{$barang['nama']}</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </div>
+
                                     <div class="form-group form-default">
-                                        <input type="text" class="form-control" name="jumlah" value="<?php echo $jumlah; ?>" required="">
+                                        <input type="number" min="1" class="form-control" name="jumlah" value="<?php echo $data['jumlah']; ?>" required>
                                         <span class="form-bar"></span>
-                                        <label for="jumlah" class="float-label">Jumlah</label>
+                                        <label class="float-label">Jumlah</label>
                                     </div>
-                                    <div class="row">
-                                        <div class="col offset">
-                                            <button type="submit" name="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan</button>
-                                            <a href="?page=keluar" class="btn btn-warning"><i class="fa fa-chevron-left"></i> Kembali</a>
-                                        </div>
-                                    </div>
+
+                                    <button type="submit" name="update" class="btn btn-outline-success">
+                                        <i class="fa fa-save"></i> Simpan Perubahan
+                                    </button>
+                                    <a href="?page=keluar" class="btn btn-outline-warning">
+                                        <i class="fa fa-chevron-left"></i> Kembali
+                                    </a>
                                 </form>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div id="styleSelector"></div>
             </div>
         </div>
     </div>

@@ -6,11 +6,9 @@
 <?php
 $id = $_GET['id'];
 
-// Query untuk menghapus data dari database
 $result = mysqli_query($con, "DELETE FROM petugas WHERE id=$id");
 
 if ($result) {
-    // Jika penghapusan berhasil, tampilkan notifikasi dengan SweetAlert
     echo "
     <script>
         Swal.fire({
@@ -26,7 +24,6 @@ if ($result) {
     </script>
     ";
 } else {
-    // Jika ada kesalahan saat menghapus data
     echo "
     <script>
         Swal.fire({

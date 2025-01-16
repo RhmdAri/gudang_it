@@ -5,19 +5,19 @@
 
 <?php
 $id = $_GET['id'];
-$result = mysqli_query($con, "DELETE FROM petugas WHERE id=$id");
+$result = mysqli_query($con, "DELETE FROM kegiatan WHERE id=$id");
 
 if ($result) {
     echo "
     <script>
         Swal.fire({
             title: 'Berhasil!',
-            text: 'Data petugas berhasil dihapus.',
+            text: 'Data kegiatan berhasil dihapus.',
             icon: 'success',
             confirmButtonText: 'OK'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '?page=petugas';
+                window.location.href = '?page=kegiatan';
             }
         })
     </script>
@@ -32,7 +32,7 @@ if ($result) {
             confirmButtonText: 'OK'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = '?page=petugas';
+                window.location.href = '?page=kegiatan';
             }
         })
     </script>

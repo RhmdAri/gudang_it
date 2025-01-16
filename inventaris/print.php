@@ -4,8 +4,20 @@ require '../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-if (isset($_GET['export_excel'])) {
+session_start();
+include '../connection.php';
 
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Nama Pegawai Tidak Dikenal';
+$divisi = isset($_SESSION['divisi']) ? $_SESSION['divisi'] : null;
+
+if (!$divisi) {
+    echo "<script>
+        alert('Akses ditolak! Divisi tidak ditemukan.');
+        window.location.href = 'login.php';
+    </script>";
+    exit();
+}
+if (isset($_GET['export_excel'])) {
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
 
@@ -36,21 +48,17 @@ if (isset($_GET['export_excel'])) {
         ],
     ]);
 
-    include '../connection.php';
-
-    if (!$con) {
-        die("Koneksi database gagal: " . mysqli_connect_error());
-    }
-
-    $result = mysqli_query($con, "SELECT * FROM inventaris");
+    $query = "SELECT * FROM inventaris WHERE divisi = ?";
+    $stmt = $con->prepare($query);
+    $stmt->bind_param("s", $divisi);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     $rowNum = 4;
-    if ($result) {
-        while ($data = mysqli_fetch_array($result)) {
-            $sheet->setCellValue('A' . $rowNum, $data['nama'])
-                  ->setCellValue('B' . $rowNum, $data['stok']);
-            $rowNum++;
-        }
+    while ($data = $result->fetch_assoc()) {
+        $sheet->setCellValue('A' . $rowNum, $data['nama'])
+              ->setCellValue('B' . $rowNum, $data['stok']);
+        $rowNum++;
     }
 
     $styleArray = [
@@ -79,6 +87,11 @@ if (isset($_GET['export_excel'])) {
     $writer->save('php://output');
     exit();
 }
+
+// Cetak Data
+$bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
+$bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
+$tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
 ?>
 
 <!DOCTYPE html>
@@ -86,56 +99,70 @@ if (isset($_GET['export_excel'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Data Petugas</title>
+    <title>Cetak Data Inventaris</title>
     <style>
-        * {
-            font-family: arial;
-        }
-        
-        table {
-            border-collapse: collapse;
-            font-size: 12px;
-        }
+        * { font-family: Arial, sans-serif; }
+        table { border-collapse: collapse; font-size: 12px; }
+        table th, table td { text-align: center; padding: 5px; }
+        thead { background-color: #28a745; color: white; }
+        .kop-surat { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+        .kop-surat img { width: 100px; }
+        .kop-surat .title { text-align: center; flex: 1; margin-left: 10px; }
+        .kop-surat .title h1 { margin: 0; font-size: 18px; text-transform: uppercase; }
+        .kop-surat .title p { margin: 0; font-size: 14px; }
+        .table-container { margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1 align="center">Laporan Data Petugas</h1>
-    <p align="center"><?= date("Y/m/d") ?></p>
-    <table border="1" width="100%" cellpadding="5">
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Nama Barang</th>
-                <th>Stok</th>
-            </tr>
-        </thead>
-        
-        <tbody>
-        <?php
-        include '../connection.php';
-        $result = mysqli_query($con, "SELECT * FROM inventaris");
+    <div class="kop-surat">
+        <img src="../assets/images/rsisa.png" alt="Logo RSI Sultan Agung Banjarbaru">
+        <div class="title">
+            <h1>RSI Sultan Agung Banjarbaru</h1>
+            <p>Data Inventaris</p>
+            <p><?= $bulanNama ?> <?= $tahun ?></p>
+        </div>
+    </div>
 
-        $no = 1;
-        while ($data = mysqli_fetch_array($result)) {
-        ?>
-        <tr>
-            <td width="30" align="center"><?= $no++ ?></td> 
-            <td><?php echo $data['nama']; ?></td>
-            <td><?php echo $data['stok']; ?></td>
-        </tr>
-        <?php
-        }
-        ?>
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table border="1" width="100%" cellpadding="5">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Barang</th>
+                    <th>Stok</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php
+            $query = "SELECT * FROM inventaris WHERE divisi = ?";
+            $stmt = $con->prepare($query);
+            $stmt->bind_param("s", $divisi);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $no = 1;
+
+            while ($data = $result->fetch_assoc()) {
+            ?>
+            <tr>
+                <td width="30" align="center"><?= $no++; ?></td> 
+                <td><?= htmlspecialchars($data['nama']); ?></td>
+                <td align="center"><?= htmlspecialchars($data['stok']); ?></td>
+            </tr>
+            <?php
+            }
+            ?>
+            </tbody>
+        </table>
+    </div>
+
     <br><br>
     <table width="100%">
         <tbody>
         <tr>
             <td width="50%" align="center">
-                <p>Pegawai</p>
+                <p>Penanggung Jawab</p>
                 <br><br><br>
-                <p><strong>Nama Pegawai</strong></p>
+                <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
             </td>
         </tr>
         </tbody>
