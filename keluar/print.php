@@ -2,33 +2,40 @@
 require '../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xls;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 include('../connection.php');
+
 $bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
 $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
-if (isset($_GET['export_excel']) && $_GET['export_excel'] == 'true') {
+
+if (isset($_GET['export_excel']) && $_GET['export_excel'] === 'true') {
     $bulanArray = [
         '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April',
         '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August',
         '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
     ];
     $namaBulan = $bulanArray[$bulan];
+
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
+
     $sheet->mergeCells('A1:E1');
     $sheet->setCellValue('A1', 'Laporan Barang Keluar');
     $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
     $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
     $sheet->mergeCells('A2:E2');
-    $sheet->setCellValue('A2', $namaBulan . ' ' . $tahun);
+    $sheet->setCellValue('A2', "$namaBulan $tahun");
     $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
     $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
     $sheet->setCellValue('A3', 'No')
           ->setCellValue('B3', 'Waktu')
           ->setCellValue('C3', 'Nama Petugas')
           ->setCellValue('D3', 'Nama Barang')
           ->setCellValue('E3', 'Jumlah');
+    
     $sheet->getStyle('A3:E3')->applyFromArray([
         'fill' => [
             'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -41,6 +48,7 @@ if (isset($_GET['export_excel']) && $_GET['export_excel'] == 'true') {
             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
         ],
     ]);
+
     $query = "
         SELECT keluar.waktu, petugas.nama AS namaPetugas, barang.nama AS namaBarang, keluar.jumlah
         FROM keluar
@@ -48,9 +56,11 @@ if (isset($_GET['export_excel']) && $_GET['export_excel'] == 'true') {
         INNER JOIN barang ON keluar.idBarang = barang.id
         WHERE MONTH(keluar.waktu) = '$bulan' AND YEAR(keluar.waktu) = '$tahun'
         ORDER BY keluar.waktu DESC";
+
     $result = mysqli_query($con, $query);
     $rowNumber = 4;
     $no = 1;
+
     while ($row = mysqli_fetch_assoc($result)) {
         $waktuFormatted = date('d-m-Y H:i:s', strtotime($row['waktu']));
         $sheet->setCellValue('A' . $rowNumber, $no++);
@@ -60,6 +70,7 @@ if (isset($_GET['export_excel']) && $_GET['export_excel'] == 'true') {
         $sheet->setCellValue('E' . $rowNumber, $row['jumlah']);
         $rowNumber++;
     }
+
     $styleArray = [
         'borders' => [
             'allBorders' => [
@@ -68,26 +79,30 @@ if (isset($_GET['export_excel']) && $_GET['export_excel'] == 'true') {
             ],
         ],
     ];
+
     $sheet->getStyle('A3:E' . ($rowNumber - 1))->applyFromArray($styleArray);
     foreach (range('A', 'E') as $columnID) {
         $sheet->getColumnDimension($columnID)->setAutoSize(true);
     }
+
     header('Content-Type: application/vnd.ms-excel');
-    header('Content-Disposition: attachment;filename="Laporan_Barang_Keluar_' . $namaBulan . '_' . $tahun . '.xls"');
+    header("Content-Disposition: attachment;filename=\"Laporan_Barang_Keluar_{$namaBulan}_{$tahun}.xlsx\"");
     header('Cache-Control: max-age=0');
-    $writer = new Xls($spreadsheet);
+
+    $writer = new Xlsx($spreadsheet);
     $writer->save('php://output');
     exit;
 }
 
 $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Laporan Barang Keluar</title>
+    <title>Cetak Laporan Barang Masuk</title>
     <style>
         * {
             font-family: Arial, sans-serif;
@@ -144,10 +159,17 @@ $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
     </style>
 </head>
 <body>
-<?php
+    <?php
     session_start();
     include '../connection.php';
-    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Nama Pegawai Tidak Dikenal'
+    $divisi = isset($_SESSION['divisi']) ? $_SESSION['divisi'] : null;
+    $bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
+    $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
+    $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
+    $currentDate = date("d F Y");
+    $level = isset($_SESSION['level']) ? $_SESSION['level'] : 'user';
+    $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : 'Anonim';
+    include '../connection.php';
     ?>
     <div class="kop-surat">
         <img src="../assets/images/rsisa.png" alt="Logo RSI Sultan Agung Banjarbaru">
@@ -195,9 +217,18 @@ $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
     </table>
 
     <div class="footer">
-        <p>Pegawai</p>
-        <br><br><br>
-        <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
+        <table width="100%">
+            <tr>
+                <td align="right">
+                    <p style="font-size: 14px;"><strong>Banjarbaru, <?= $currentDate ?></strong></p> 
+                    <?php if ($level === 'kepala') { ?>
+                    <div class="barcode" style="margin: 10px 0;">
+                        <img src="../assets/images/pengesahan.png" alt="Barcode" style="width: 100px;">
+                    </div>
+                    <?php } ?>
+                    <p style="font-size: 14px;"><strong><?= $nama ?></strong></p> 
+            </tr>
+        </table>
     </div>
 
     <script>

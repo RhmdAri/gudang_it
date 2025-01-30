@@ -151,7 +151,14 @@ $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
     <?php
     session_start();
     include '../connection.php';
-    $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Nama Pegawai Tidak Dikenal'
+    $divisi = isset($_SESSION['divisi']) ? $_SESSION['divisi'] : null;
+    $bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
+    $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
+    $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
+    $currentDate = date("d F Y");
+    $level = isset($_SESSION['level']) ? $_SESSION['level'] : 'user';
+    $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : 'Anonim';
+    include '../connection.php';
     ?>
     <div class="kop-surat">
         <img src="../assets/images/rsisa.png" alt="Logo RSI Sultan Agung Banjarbaru">
@@ -199,9 +206,18 @@ $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
     </table>
 
     <div class="footer">
-        <p>Pegawai</p>
-        <br><br><br>
-        <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
+        <table width="100%">
+            <tr>
+                <td align="right">
+                    <p style="font-size: 14px;"><strong>Banjarbaru, <?= $currentDate ?></strong></p> 
+                    <?php if ($level === 'kepala') { ?>
+                    <div class="barcode" style="margin: 10px 0;">
+                        <img src="../assets/images/pengesahan.png" alt="Barcode" style="width: 100px;">
+                    </div>
+                    <?php } ?>
+                    <p style="font-size: 14px;"><strong><?= $nama ?></strong></p> 
+            </tr>
+        </table>
     </div>
 
     <script>

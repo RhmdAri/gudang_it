@@ -141,11 +141,21 @@ $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
         .footer p {
             margin: 0;
         }
+        .barcode {
+            text-align: center;
+            margin: 10px 0;
+        }
+        .barcode img {
+            width: 150px;
+        }
     </style>
 </head>
 <body>
     <?php
     $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Nama Pegawai Tidak Dikenal';
+    $nama = isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest';
+    $level = isset($_SESSION['level']) ? $_SESSION['level'] : 'user';
+    $currentDate = date("d F Y");
     ?>
 
     <div class="kop-surat">
@@ -193,15 +203,18 @@ $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
     <div class="footer">
         <table width="100%">
             <tr>
-                <td width="50%" align="center">
-                    <p>Penanggung Jawab</p>
-                    <br><br><br>
-                    <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
+                <td align="right">
+                    <p style="margin: 0; font-size: 1.2em; font-weight: bold;">Banjarbaru, <?= $currentDate ?></p>
+                    <?php if ($level === 'kepala') { ?>
+                    <div class="barcode" style="margin: 10px 0;">
+                        <img src="../assets/images/pengesahan.png" alt="Barcode" style="width: 100px;">
+                    </div>
+                    <?php } ?>
+                    <p style="margin: 0; font-size: 1.2em; font-weight: bold;"><strong><?= $nama ?></strong></p>
                 </td>
             </tr>
         </table>
     </div>
-
     <script>
         window.print();
     </script>

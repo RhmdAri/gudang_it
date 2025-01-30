@@ -10,6 +10,11 @@ include '../connection.php';
 $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Nama Pegawai Tidak Dikenal';
 $divisi = isset($_SESSION['divisi']) ? $_SESSION['divisi'] : null;
 
+// Inisialisasi variabel tambahan
+$currentDate = date('d F Y'); // Tanggal saat ini
+$level = isset($_SESSION['level']) ? $_SESSION['level'] : 'user'; // Default level
+$nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : 'Nama Tidak Diketahui'; // Default nama
+
 if (!$divisi) {
     echo "<script>
         alert('Akses ditolak! Divisi tidak ditemukan.');
@@ -26,7 +31,6 @@ if (isset($_GET['export_excel'])) {
     $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
     $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-    $currentDate = date('d F Y');
     $sheet->mergeCells('A2:B2');
     $sheet->setCellValue('A2', $currentDate);
     $sheet->getStyle('A2')->getFont()->setBold(true);
@@ -156,18 +160,21 @@ $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
     </div>
 
     <br><br>
-    <table width="100%">
-        <tbody>
-        <tr>
-            <td width="50%" align="center">
-                <p>Penanggung Jawab</p>
-                <br><br><br>
-                <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    
+    <div class="footer">
+        <table width="100%">
+            <tr>
+                <td align="right">
+                    <p style="margin: 0; font-size: 1.2em; font-weight: bold;">Banjarbaru, <?= $currentDate ?></p> 
+                    <?php if ($level === 'kepala') { ?>
+                    <div class="barcode" style="margin: 10px 0;">
+                        <img src="../assets/images/pengesahan.png" alt="Barcode" style="width: 100px;">
+                    </div>
+                    <?php } ?>
+                    <p style="margin: 0; font-size: 1.2em; font-weight: bold;"><strong><?= $nama ?></strong></p> 
+                </td>
+            </tr>
+        </table>
+    </div>
     <script>
         window.print();
     </script>

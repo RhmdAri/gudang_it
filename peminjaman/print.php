@@ -57,7 +57,7 @@ if (isset($_GET['export_excel'])) {
         INNER JOIN petugas ON pinjam.idPetugas = petugas.id
         INNER JOIN inventaris ON inventaris.id = pinjam.idInventaris
         WHERE MONTH(pinjam.waktu) = '$bulan' AND YEAR(pinjam.waktu) = '$tahun'
-        AND pinjam.devisi = '$divisi'  -- Filter berdasarkan divisi
+        AND pinjam.devisi = '$divisi'
         GROUP BY pinjam.nama, pinjam.tempat, pinjam.keperluan, petugas.nama
         ORDER BY pinjam.waktu DESC");
 
@@ -166,6 +166,7 @@ if (isset($_GET['export_excel'])) {
 
         .footer {
             margin-top: 50px;
+            font-size: 14px;
         }
 
         .footer p {
@@ -181,6 +182,9 @@ if (isset($_GET['export_excel'])) {
     $bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
     $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
     $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
+    $currentDate = date("d F Y");
+    $level = isset($_SESSION['level']) ? $_SESSION['level'] : 'user';
+    $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : 'Anonim';
     ?>
 
     <div class="kop-surat">
@@ -242,11 +246,14 @@ if (isset($_GET['export_excel'])) {
     <div class="footer">
         <table width="100%">
             <tr>
-                <td width="50%" align="center">
-                    <p>Pegawai</p>
-                    <br><br><br>
-                    <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
-                </td>
+                <td align="right">
+                    <p style="font-size: 14px;"><strong>Banjarbaru, <?= $currentDate ?></strong></p> 
+                    <?php if ($level === 'kepala') { ?>
+                    <div class="barcode" style="margin: 10px 0;">
+                        <img src="../assets/images/pengesahan.png" alt="Barcode" style="width: 100px;">
+                    </div>
+                    <?php } ?>
+                    <p style="font-size: 14px;"><strong><?= $nama ?></strong></p> 
             </tr>
         </table>
     </div>

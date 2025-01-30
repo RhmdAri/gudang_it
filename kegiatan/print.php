@@ -111,6 +111,16 @@ $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
     </style>
 </head>
 <body>
+<?php
+    include '../connection.php';
+    $divisi = isset($_SESSION['divisi']) ? $_SESSION['divisi'] : null;
+    $bulan = isset($_GET['bulan']) ? $_GET['bulan'] : date('m');
+    $tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
+    $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
+    $currentDate = date("d F Y");
+    $level = isset($_SESSION['level']) ? $_SESSION['level'] : 'user';
+    $nama = isset($_SESSION['nama']) ? $_SESSION['nama'] : 'Anonim';
+    ?>
     <div class="kop-surat">
         <img src="../assets/images/rsisa.png" alt="Logo RSI Sultan Agung Banjarbaru">
         <div class="title">
@@ -160,11 +170,14 @@ $bulanNama = date('F', mktime(0, 0, 0, $bulan, 10));
     <div class="footer">
         <table width="100%">
             <tr>
-                <td width="50%" align="center">
-                    <p>Pegawai</p>
-                    <br><br><br>
-                    <p><strong><?php echo isset($_SESSION['nama']) ? htmlspecialchars($_SESSION['nama']) : 'Guest'; ?></strong></p>
-                </td>
+                <td align="right">
+                    <p style="font-size: 14px;"><strong>Banjarbaru, <?= $currentDate ?></strong></p> 
+                    <?php if ($level === 'kepala') { ?>
+                    <div class="barcode" style="margin: 10px 0;">
+                        <img src="../assets/images/pengesahan.png" alt="Barcode" style="width: 100px;">
+                    </div>
+                    <?php } ?>
+                    <p style="font-size: 14px;"><strong><?= $nama ?></strong></p> 
             </tr>
         </table>
     </div>
